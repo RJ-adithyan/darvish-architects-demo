@@ -222,39 +222,228 @@ if (typeof document !== 'undefined') (() => {
   }
 })();
 // THEME PACK START
-// Laterite and Sage: hero headline word by word (second half italic), images unmask upward on scroll.
-(function () {
-  if (typeof document === 'undefined' || !document.documentElement || typeof window === 'undefined' || !window.addEventListener || !window.matchMedia) return;
-  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced) return;
+/* Pack 8 motion: day and dusk toggle, italic last word, rules that draw across, timeline that rises in order. */
+if (typeof document !== 'undefined' && document.documentElement && typeof window !== 'undefined' && window.addEventListener) {
+  (() => {
+    const all = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+    const reduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
 
-  var title = document.querySelector('.hero-main h1');
-  if (title && !title.querySelector('.lt-w')) {
-    var words = title.textContent.trim().split(/\s+/);
-    var split = words.findIndex(function (w, i) { return i < words.length - 1 && /[.!?]$/.test(w); }) + 1;
-    if (split < 1) split = Math.ceil(words.length / 2);
-    title.setAttribute('aria-label', words.join(' '));
-    title.textContent = '';
-    words.forEach(function (word, i) {
-      var span = document.createElement('span');
-      span.className = 'lt-w' + (i >= split ? ' is-it' : '');
-      span.style.setProperty('--i', i);
-      span.setAttribute('aria-hidden', 'true');
-      span.textContent = word;
-      title.appendChild(span);
-      if (i < words.length - 1) title.appendChild(document.createTextNode(' '));
+    // 1. The last word of each big heading turns italic.
+    const italicise = heading => {
+      const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+      let last = null;
+      while (walker.nextNode()) if (walker.currentNode.nodeValue.trim()) last = walker.currentNode;
+      if (!last) return;
+      const match = last.nodeValue.match(/(\S+)\s*$/);
+      if (!match) return;
+      const tail = last.splitText(match.index);
+      const em = document.createElement('em');
+      em.className = 'tn-it';
+      tail.parentNode.insertBefore(em, tail);
+      em.appendChild(tail);
+    };
+    all('h1.display, .hero-main h1, h2.heading[data-reveal="text"]')
+      .filter(el => !el.closest('.fl-principle, .fl-process-step, .fl-contact-panel, .service-staircase, .fl-next-project'))
+      .forEach(italicise);
+
+    // 2. Day to dusk toggle on the home hero. The CSS animation plays the first dusk; the button swaps back and forth.
+    const hero = document.querySelector('.home-hero');
+    if (hero) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'tn-sun';
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-label', 'Show the building in daylight');
+      button.innerHTML =
+        '<svg class="tn-sunicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>' +
+        '<svg class="tn-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+      hero.appendChild(button);
+      let day = false;
+      button.addEventListener('click', () => {
+        day = !day;
+        hero.style.animation = 'none';
+        hero.style.setProperty('--tn-dusk', day ? '0' : '1');
+        button.setAttribute('aria-pressed', String(day));
+        button.setAttribute('aria-label', day ? 'Show the building at dusk' : 'Show the building in daylight');
+      });
+    }
+
+    // 3. Rules draw across and timeline years rise in order, once each section is in view.
+    const armed = all('.craft-heading, .showcase-heading .heading, .home-services .heading, .origin-copy .heading, .fl-page-intro .display, .fl-about-intro .display, .fl-services-intro .heading, .fl-contact-copy .display, .fl-project-heading .display, .closing-cta .heading, .fl-image-hero .display, .hero-main h1');
+    const lists = all('.service-staircase');
+    if ('IntersectionObserver' in window && !reduce) {
+      const io = new IntersectionObserver(entries => entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('tn-seen');
+        io.unobserve(entry.target);
+      }), { threshold: .15 });
+      armed.forEach(el => { el.classList.add('tn-armed'); io.observe(el); });
+      lists.forEach(list => {
+        list.classList.add('tn-armed-list');
+        all(':scope > li', list).forEach((item, index) => item.style.setProperty('--i', index));
+        io.observe(list);
+      });
+    }
+  })();
+}
+// THEME PACK END
+
+// DARVISH LAYER START: "Jaali and Dusk" (design brief v2, items 2-9).
+// Guarded per the Pack Contract: check-media.cjs runs this file in a fake VM and check-motion.cjs requires it in Node.
+// Everything here is decoration on top of content that already shows without JS.
+(function () {
+  if (typeof document === 'undefined' || !document.documentElement || !document.body || typeof window === 'undefined' || !window.addEventListener || !window.matchMedia) return;
+  var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var still = reduce.matches;
+  var hasIO = 'IntersectionObserver' in window;
+  var all = function (selector, scope) { return Array.prototype.slice.call((scope || document).querySelectorAll(selector)); };
+  var make = function (tag, className) { var el = document.createElement(tag); el.className = className; el.setAttribute('aria-hidden', 'true'); return el; };
+  var onceInView = function (targets, threshold, callback) {
+    if (!hasIO) { targets.forEach(callback); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        io.unobserve(entry.target);
+        callback(entry.target);
+      });
+    }, { threshold: threshold });
+    targets.forEach(function (target) { io.observe(target); });
+  };
+  if (!still && hasIO) root.classList.add('dv-js');
+
+  // The dusk film is the hero now, so pack 8's day/dusk button goes.
+  all('.tn-sun').forEach(function (button) { button.remove(); });
+
+  // Is this element painted on navy? Walk up to the first opaque background; the page body is navy.
+  var isDark = function (element) {
+    for (var node = element; node && node.nodeType === 1; node = node.parentElement) {
+      var colour = getComputedStyle(node).backgroundColor || '';
+      var parts = colour.match(/[\d.]+/g);
+      if (!parts || parts.length < 3) continue;
+      var scale = colour.indexOf('color(') === 0 ? 255 : 1;
+      if (parts.length > 3 && +parts[3] <= .5) continue;
+      return (0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2]) * scale / 255 < .4;
+    }
+    return true;
+  };
+  var sections = all('main > section, .closing-cta');
+
+  // 3. Section labels: column glyph, Roman numeral, name, written into the heading (hidden from screen readers).
+  var byId = { 'showcase-title': 'The work', 'services-title': 'Services', 'work-title': 'The work', 'studio-title': 'The studio', 'studio-statement-title': 'Philosophy', 'process-title': 'Approach', 'approach-title': 'Method', 'contact-title': 'Contact' }; // Project story sections already carry pack 8's large numerals.
+  var byClass = [['craft-section', 'Materials'], ['home-origin', 'The studio'], ['closing-cta', 'Enquire']];
+  var roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  var count = 0;
+  sections.forEach(function (section) {
+    var id = section.getAttribute('aria-labelledby');
+    var name = id && byId[id];
+    byClass.forEach(function (pair) { if (!name && section.classList.contains(pair[0])) name = pair[1]; });
+    var heading = (id && document.getElementById(id)) || section.querySelector('h2.heading, h1.display');
+    if (!name || !heading || heading.querySelector('.dv-label') || count >= roman.length) return;
+    var label = make('span', 'dv-label');
+    label.innerHTML = '<span class="dv-num"></span><span class="dv-dot">·</span><span class="dv-name"></span>';
+    label.querySelector('.dv-num').textContent = roman[count++];
+    label.querySelector('.dv-name').textContent = name;
+    if (isDark(heading)) label.classList.add('dv-on-dark');
+    if (getComputedStyle(heading).textAlign === 'center') label.classList.add('dv-center');
+    heading.insertBefore(label, heading.firstChild);
+  });
+
+  // 5. Colonnade divider at the top of each section after the first, columns rising left to right.
+  var first = document.querySelector('main') && document.querySelector('main').firstElementChild;
+  sections.forEach(function (section) {
+    if (section === first || section.classList.contains('container') || !(section.classList.contains('section') || section.classList.contains('closing-cta'))) return;
+    var row = make('div', 'dv-colonnade');
+    for (var i = 0; i < 25; i++) { var column = document.createElement('i'); column.style.setProperty('--i', i); row.appendChild(column); }
+    if (isDark(section)) row.classList.add('dv-on-dark');
+    section.classList.add('dv-colonnade-host');
+    section.insertBefore(row, section.firstChild);
+    if (!still && hasIO) {
+      row.classList.add('dv-armed');
+      onceInView([row], .6, function (target) { target.classList.add('dv-seen'); });
+    }
+  });
+
+  // 4. Photos open through a jaali lattice. The master fade starts at 12% opacity and would hide the lattice, so it is cancelled here.
+  if (!still && hasIO) {
+    var veiled = all('[data-reveal="image"]');
+    veiled.forEach(function (frame) { frame.classList.add('dv-veil'); });
+    onceInView(veiled, .15, function (frame) {
+      if (frame.getAnimations) frame.getAnimations().forEach(function (animation) { animation.cancel(); });
+      requestAnimationFrame(function () { requestAnimationFrame(function () { frame.classList.add('dv-open'); }); });
+      setTimeout(function () { frame.classList.remove('dv-veil', 'dv-open'); }, 1050);
     });
   }
 
-  if (!('IntersectionObserver' in window)) return;
-  var targets = document.querySelectorAll('[data-reveal="image"]');
-  var observer = new IntersectionObserver(function (entries) {
-    entries.forEach(function (entry) {
-      if (!entry.isIntersecting) return;
-      observer.unobserve(entry.target);
-      entry.target.classList.add('lt-in');
+  // 8. Facts band: unit and plus sign styled apart, numbers count up once.
+  var facts = document.querySelector('.dv-facts');
+  if (facts) {
+    var format = function (value) { return Math.round(value).toLocaleString('en-IN'); };
+    all('.dv-fact', facts).forEach(function (fact, index) { fact.style.setProperty('--i', index); });
+    var counters = all('.dv-fact-num[data-count]', facts).map(function (number) {
+      var target = Number(number.getAttribute('data-count')) || 0;
+      var suffix = number.getAttribute('data-suffix') || '';
+      var value = document.createElement('span');
+      value.className = 'dv-value';
+      value.textContent = format(target);
+      number.textContent = '';
+      number.appendChild(value);
+      if (suffix) {
+        var tail = document.createElement('span');
+        tail.className = suffix.trim() === '+' ? 'dv-plus' : 'dv-unit';
+        tail.textContent = suffix;
+        number.appendChild(tail);
+      }
+      return { value: value, target: target };
     });
-  }, { threshold: 0.12 });
-  targets.forEach(function (el) { el.classList.add('lt-pre'); observer.observe(el); });
+    if (still || !hasIO) facts.classList.add('dv-seen');
+    else onceInView([facts], .35, function () {
+      facts.classList.add('dv-seen');
+      counters.forEach(function (counter, index) {
+        var start = null;
+        var step = function (time) {
+          if (start === null) start = time + index * 120;
+          var progress = Math.max(0, Math.min(1, (time - start) / 1700));
+          counter.value.textContent = format(counter.target * (1 - Math.pow(1 - progress, 4)));
+          if (progress < 1) requestAnimationFrame(step);
+        };
+        counter.value.textContent = format(0);
+        requestAnimationFrame(step);
+      });
+    });
+  }
+
+  // 7. Lamp cursor: a soft blue-white glow follows a mouse across navy sections. Fine pointer only.
+  if (!still && window.matchMedia('(pointer: fine)').matches) {
+    all('.home-hero, main > section, .closing-cta, .site-footer').filter(isDark).forEach(function (host) {
+      var lamp = make('span', 'dv-lamp');
+      host.classList.add('dv-lamp-host');
+      host.insertBefore(lamp, host.firstChild);
+      var frame = 0, x = 0, y = 0;
+      host.addEventListener('pointermove', function (event) {
+        if (event.pointerType && event.pointerType !== 'mouse') return;
+        var box = host.getBoundingClientRect();
+        x = event.clientX - box.left;
+        y = event.clientY - box.top;
+        host.classList.add('dv-lit');
+        if (!frame) frame = requestAnimationFrame(function () {
+          frame = 0;
+          host.style.setProperty('--dv-x', x + 'px');
+          host.style.setProperty('--dv-y', y + 'px');
+        });
+      }, { passive: true });
+      host.addEventListener('pointerleave', function () { host.classList.remove('dv-lit'); });
+    });
+  }
+
+  // 9. If reduced motion switches on mid-visit, settle everything in its final state.
+  reduce.addEventListener && reduce.addEventListener('change', function (event) {
+    if (!event.matches) return;
+    root.classList.remove('dv-js');
+    all('.dv-colonnade').forEach(function (row) { row.classList.remove('dv-armed'); });
+    all('.dv-veil').forEach(function (frame) { frame.classList.remove('dv-veil', 'dv-open'); });
+    all('.dv-lit').forEach(function (host) { host.classList.remove('dv-lit'); });
+    if (facts) facts.classList.add('dv-seen');
+  });
 })();
-// THEME PACK END
+// DARVISH LAYER END

@@ -111,7 +111,7 @@ def shell(title, description, body_class, header, body, footer):
 <meta name="theme-color" content="#1b1613">
 <title>{esc(title)}</title>
 {hero_preload}
-<link rel="preload" href="assets/fonts/cormorant-garamond.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="assets/fonts/jost.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="styles.css?v={style_version}">
 <script src="site.js?v={script_version}" defer></script>
 </head>

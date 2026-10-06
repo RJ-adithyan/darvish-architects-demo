@@ -45,7 +45,11 @@
   "origin_title": "A Kozhikode studio with over 100 projects",
   "origin_description": "Darvish Architects is a team of architects, designers and consultants working from Chelavur, near Medical College in Kozhikode.",
   "origin_description_two": "Chairman Darvish Kareem Muhammed leads the studio with managing director Ar. Ahammed Aflah, technical director Neethu Karnadas and director Gabish Kareem.",
-  "origin_action_label": "About the studio"
+  "origin_action_label": "About the studio",
+  "fact_one_label": "Projects completed, from the studio's own count",
+  "fact_two_label": "Largest home shown here, in Bangalore",
+  "fact_three_label": "Homes on this site",
+  "fact_four_label": "States: Kerala, Karnataka, Maharashtra"
  },
  "pages": {
   "work": {
