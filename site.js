@@ -328,6 +328,7 @@ if (typeof document !== 'undefined' && document.documentElement && typeof window
     return true;
   };
   var sections = all('main > section, .closing-cta');
+  if (sections.length < 3) sections = []; // ponytail: pages with only the closing CTA get no lone 'I' label
 
   // 3. Section labels: column glyph, Roman numeral, name, written into the heading (hidden from screen readers).
   var byId = { 'showcase-title': 'The work', 'services-title': 'Services', 'work-title': 'The work', 'studio-title': 'The studio', 'studio-statement-title': 'Philosophy', 'process-title': 'Approach', 'approach-title': 'Method', 'contact-title': 'Contact' }; // Project story sections already carry pack 8's large numerals.
